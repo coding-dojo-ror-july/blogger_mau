@@ -285,3 +285,106 @@ Blog.first.users
 
 # 20. Change it so that the first blog is no longer owned by the first user.
 Owner.where("id = ? AND user_id = ?", 1, 1,).update_all("user_id = 5")
+
+# Assignment: Polymorphism
+We're going to add another model (Comment) to our Blogs/Posts/Messages assignment. 
+Let's say that we want to allow the user to leave a comment for either a user, blog, post or a message. 
+Instead of creating a new comment table for each element 
+(e.g. user_comments, blog_comments, post_comments, message_comments), 
+we just want to create a single comments table 
+but have fields in the comments table that specifies which model/table 
+(user, blog, post, message) the comment is for.
+
+Add a new model to the previous assignment 
+where now a model called Comment can take comments for a user, blog, post, or a message.
+
+Test using the console and make sure it allows you to add, update, delete comments 
+for a user, blog, post, and a message. 
+
+ Work on the tasks above and submit a single txt file 
+ that contains only the Ruby commands you ran to accomplish the tasks above.
+
+# creating a polymorphic model
+rails g model Comment content:text commentable:references{polymorphic}
+
+# model structures
+class Comment < ActiveRecord::Base
+  belongs_to :commentable, polymorphic: true
+
+  validates :content, presence: true
+end
+
+class User < ActiveRecord::Base
+  EMAIL_REGEX = /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]+)\z/i
+  has_many :owners
+  has_many :messages
+  has_many :posts
+
+  # added the comments relationship
+  has_many :comments, as: :commentable
+
+
+  # all the blogs owned by a specific user
+  has_many :blogs, through: :owners
+
+  # all the blogs a user has posted on
+  has_many :blog_posts, through: :posts, source: :blog
+
+  validates :email, uniqueness: { case_sensitive: false }, format: { with: EMAIL_REGEX }
+  validates :first_name, :last_name, :email, presence: true
+end
+
+class Blog < ActiveRecord::Base
+  has_many :owners
+  has_many :posts
+  has_many :comments, as: :commentable
+
+  # added the comments relationship
+  has_many :comments, as: :commentable
+
+  # all the users that own a specifc blog
+  has_many :users, through: :owners
+
+  # all the users that posted on a specific blog
+  has_many :user_posts, through: :posts, source: :user
+
+  validates :name, :description, presence: true
+end
+
+class Post < ActiveRecord::Base
+  has_many :messages
+  belongs_to :blog
+  belongs_to :user
+
+  # added the comments relationship
+  has_many :comments, as: :commentable
+
+  validates :content, :title, presence: true
+end
+
+class Message < ActiveRecord::Base
+  belongs_to :post
+  belongs_to :user
+
+  # added the comments relationship
+  has_many :comments, as: :commentable
+
+  validates :author, :message, presence: true
+end
+
+# add comments for user, blog, post and message
+Comment.create(content: "This is a comment from the 2nd user", commentable: User.second)
+Comment.create(content: "Another comment from the 2nd user", commentable: User.second)
+User.second.comments
+
+Comment.create(content: "This is a comment on the first blog", commentable: Blog.first)
+Comment.create(content: "Another comment on the first blog", commentable: Blog.first)
+Blog.first.comments
+
+Comment.create(content: "This is a comment on the third post", commentable: Post.third)
+Comment.create(content: "Another comment on the third post", commentable: Post.third)
+Post.third.comments
+
+Comment.create(content: "This is a comment on the tenth message", commentable: Message.find(10))
+Comment.create(content: "Another comment on the tenth message", commentable: Message.find(10))
+Message.find(10).comments
