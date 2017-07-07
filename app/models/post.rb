@@ -1,8 +1,7 @@
 class Post < ActiveRecord::Base
-  belongs_to :blog
   has_many :messages
+  belongs_to :blog
+  belongs_to :user
 
-  # 2. require the presence of title and content for the posts, require the title to be at least 7 characters long.
-  validates :content, presence: true
-  validates :title, length: { minimum: 7 }
+  validates :content, :title, presence: true
 end
